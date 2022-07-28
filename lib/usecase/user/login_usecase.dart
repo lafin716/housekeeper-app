@@ -1,6 +1,3 @@
-
-import 'dart:convert';
-
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:housekeeper_front/api/housekeeper/response.dart';
 import 'package:housekeeper_front/api/housekeeper/user_api.dart';
@@ -8,8 +5,6 @@ import 'package:housekeeper_front/model/token_model.dart';
 import 'package:housekeeper_front/usecase/input.dart';
 import 'package:housekeeper_front/usecase/output.dart';
 import 'package:housekeeper_front/usecase/usecase.dart';
-import 'package:http/http.dart' as http;
-import 'package:intl/intl.dart';
 
 class LoginUseCase implements UseCase {
   late String id;
@@ -17,7 +12,7 @@ class LoginUseCase implements UseCase {
   LoginUseCase({required this.id, required this.pw});
 
   @override
-  Future<Output> execute() async {
+  Future<LoginOutput> execute() async {
     var input = LoginInput(id: id, pw: pw);
     input.validate();
 
@@ -39,7 +34,7 @@ class LoginUseCase implements UseCase {
 
     return LoginOutput.ok(
         message: '로그인 성공',
-        data: response.data,
+        data: loginData,
     );
   }
 }
@@ -59,9 +54,11 @@ class LoginInput implements Input {
 }
 
 class LoginOutput implements Output {
+  @override
   bool result = false;
+  @override
   String message = '로그인 정보를 다시 확인하세요.';
-  Map data = {};
+  UserModel data = UserModel(type: "", accessToken: "", refreshToken: "", createdAt: "");
 
   LoginOutput.ok({required this.message, required this.data}) {
     result = true;

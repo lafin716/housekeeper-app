@@ -3,7 +3,9 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:housekeeper_front/screen/dashboard_screen.dart';
 import 'package:housekeeper_front/screen/logout_screen.dart';
+import 'package:housekeeper_front/usecase/output.dart';
 import 'package:housekeeper_front/usecase/user/login_usecase.dart';
 
 void main() {
@@ -17,7 +19,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'HouseKeeper',
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
@@ -34,7 +36,10 @@ class MainPage extends StatefulWidget {
 class _LoginState extends State<MainPage> {
   late TextEditingController idController;
   late TextEditingController pwController;
-  String? userInfo = "";
+
+  String? storedEmail = "";
+  String? accessToken = "";
+  String? refreshToken = "";
 
   static final storage = new FlutterSecureStorage();
 
@@ -51,16 +56,16 @@ class _LoginState extends State<MainPage> {
   }
 
   _asyncMethod() async {
-    userInfo = await storage.read(key: "login");
+    storedEmail = await storage.read(key: "storedEmail");
+    accessToken = await storage.read(key: "accessToken");
+    refreshToken = await storage.read(key: "refreshToken");
 
-    if (userInfo != null) {
+    if (accessToken != null) {
       Navigator.pushReplacement(
         context,
         CupertinoPageRoute(
-          builder: (context) => LogoutScreen(
-          id: userInfo!.split(" ")[1],
-          pw: userInfo!.split(" ")[3],
-        )),
+          builder: (context) => DashBoardScreen(accessToken: accessToken!),
+        ),
       );
     }
   }
@@ -68,15 +73,13 @@ class _LoginState extends State<MainPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('타이틀'),
-      ),
       body: Padding(
         padding: EdgeInsets.all(10),
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              Image.asset('images/icon.png', width: 75,),
               TextField(
                 controller: idController,
                 decoration: InputDecoration(labelText: '아이디'),
@@ -85,32 +88,27 @@ class _LoginState extends State<MainPage> {
                 controller: pwController,
                 decoration: InputDecoration(labelText: '비밀번호'),
               ),
+              Padding(padding: EdgeInsets.all(20.0)),
               RaisedButton(
                 onPressed: () async {
-
                   var login = LoginUseCase(
                     id: idController.text.toString(),
                     pw: pwController.text.toString(),
                   );
 
-                  var response = await login.execute();
-                  print(response);
+                  LoginOutput response = await login.execute();
+                  if (response.result) {
+                    Navigator.pushReplacement(
+                        context,
+                        CupertinoPageRoute(
+                          builder: (context) => DashBoardScreen(accessToken: response.data.accessToken)
+                        )
+                    );
+                  }
 
-
-                  var loginData = {
-                    'id': idController.text.toString(),
-                    'pw': pwController.text.toString()
-                  };
-                  await storage.write(
-                      key: 'login',
-                      value: jsonEncode(loginData),
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(response.message))
                   );
-
-                  Navigator.pushReplacement(context, CupertinoPageRoute(
-                      builder: (context) => LogoutScreen(
-                        id: idController.text,
-                        pw: pwController.text,
-                      )));
                 },
                 child: Text('로그인'),
               ),
